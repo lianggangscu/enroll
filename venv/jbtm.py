@@ -7,9 +7,14 @@ from selenium import webdriver
 import time
 from selenium.webdriver.common.keys import Keys
 
+import pickle
+
 url='https://www.cdzk.cn'
-usrname="13688329270"
+#usrname="13688329270" #science
+usrname="13518151051"
 passwd="lwy0318"
+
+
 
 def login(Url=url,usrname=usrname,passwd=passwd):
     '''
@@ -79,6 +84,9 @@ def getProgress(filename="progress.txt"):
 
     with open("progress.txt") as f:
         progress=f.read()
+        if progress==None:
+            progress=0
+
 
     return int(progress)
 
@@ -90,21 +98,40 @@ def parsePages(driver,pages,page=0):
     :return:
     '''
 
+    tasks=[]
     count=0
     pageNum=int(pages) #the total page for page num
 
+    if page>=pages:
+        driver.close()
+        return
     if page!=0:
-        for item in range(page+1):
+        for item in range(page-1):
             driver.find_element_by_xpath('/html/body/div[2]/div[2]/div[4]/ul/li[12]').click()
             driver.implicitly_wait(10)
+    count=page
 
-    for item in range(pageNUm):
+    while(count<=pages):
         count+=1 #page one
+        parsePage(driver,tasks)
+        driver.find_element_by_xpath('/html/body/div[2]/div[2]/div[4]/ul/li[12]').click()
+        driver.implicitly_wait(10)
+        with open("progress.txt",'w') as f:
+            f.write(str(count))
+
+    driver.close()
+
+    with open("art.txt",'w') as f:
+        pickle.dump(tasks, f)
+
+    return tasks
 
 
 
 
-def parsePage(driver):
+
+
+def parsePage(driver,tasks):
     '''
     解析一张页面内容
     :param driver:
@@ -134,8 +161,9 @@ def parsePage(driver):
         # cat=cater[item].text
         # eno=enrollType[item].text
         # print(name,pro,cat,eno)
-        tasks=parseUrl(detailLinks[item])
-    getData(tasks)
+        task=parseUrl(detailLinks[item])
+        tasks.append(task)
+    #getData(tasks)
 
 
 
@@ -148,8 +176,7 @@ def parseUrl(urlEle):
     :return: 
     '''
     onetask=[]
-    temptask=[]
-    tasks=[]
+
 
     urlstring=urlEle.get_attribute("onclick")
     datalists=urlstring.split(',')
@@ -166,9 +193,9 @@ def parseUrl(urlEle):
             print(item)
             onetask.append(item.split("'")[1])
 
-        tasks.append(onetask)
-    print(tasks)
-    return tasks
+        return onetask
+
+
 
 
 def simLogin(url=url):
@@ -198,8 +225,7 @@ def getData(tasks):
     '''
 
     bro=simLogin(url)
-    print(tasks)
-    print(len(tasks))
+
 
     #bro=webdriver.Chrome()
     for item in tasks:
@@ -234,4 +260,6 @@ if __name__=="__main__":
     pages=getPages(driver)
     progress=getProgress()
     print(progress)
-    parsePage(driver)
+    tasks=parsePages(driver,pages,progress)
+    for item in tasks:
+        print(item)
